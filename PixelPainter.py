@@ -2,6 +2,7 @@ import arcade
 import config
 from arcade.gui import UIElement, UIEvent, MOUSE_PRESS, MOUSE_RELEASE
 from pyglet.event import EventDispatcher
+from brushes import BasicBrush, EraserBrush
 
 class PixelPainter(arcade.Window, EventDispatcher):
     def __init__(self):
@@ -14,14 +15,17 @@ class PixelPainter(arcade.Window, EventDispatcher):
 
     def setup(self):
         self.current_brush = 0
-        self.brushes = [None] * 6
+        self.brushes = [BasicBrush(), EraserBrush()]
         self.palette = [False] * (config.RESOLUTION_WIDTH * config.RESOLUTION_HEIGHT)
-        self.painting = False
 
     def on_draw(self):
         arcade.start_render()
         self._draw_command_pallette()
         self._draw_palette()
+
+    @property
+    def selected_brush(self):
+        return self.brushes[self.current_brush]
 
     def _draw_command_pallette(self):
         # MAIN COMMAND
@@ -80,18 +84,28 @@ class PixelPainter(arcade.Window, EventDispatcher):
                 )
 
     def on_mouse_press(self, x, y, button, modifiers):
-        self.painting = True
-        index = self._convert_cords_to_index(x, y)
-        print(index)
-        self._paint(index)
+        if y > self.height - config.COMMAND_HEIGHT:
+            self._change_brush(x, y)
+        else:
+            self.selected_brush.active=True
+            index = self._convert_cords_to_index(x, y)
+            self.selected_brush.paint(self.palette, index)
+            # self._paint(index)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        self.painting = False
+        self.selected_brush.active=False
 
     def on_mouse_motion(self, x, y, button, modifiers):
-        if self.painting and y < self.height - config.COMMAND_HEIGHT:
+        if self.selected_brush.active and y < self.height - config.COMMAND_HEIGHT:
             index = self._convert_cords_to_index(x, y)
-            self._paint(index)
+            self.selected_brush.paint(self.palette, index)
+            # self._paint(index)
+
+    def _change_brush(self, x, y):
+        relative_x = x - config.COMMAND_PADDING
+        new_brush = relative_x // config.BRUSH_WIDTH
+        if new_brush < len(self.brushes):
+            self.current_brush = new_brush
 
     def _convert_cords_to_index(self, x, y):
         y_base = (y // config.PIXEL_SIZE) * config.RESOLUTION_WIDTH
