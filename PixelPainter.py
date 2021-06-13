@@ -1,5 +1,6 @@
 import arcade
 import config
+import time
 from arcade.gui import UIElement, UIEvent, MOUSE_PRESS, MOUSE_RELEASE
 from pyglet.event import EventDispatcher
 from brushes import BasicBrush, EraserBrush
@@ -10,6 +11,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
         width = config.RESOLUTION_WIDTH * config.PIXEL_SIZE
         height = (config.RESOLUTION_HEIGHT * config.PIXEL_SIZE) + config.COMMAND_HEIGHT
         super().__init__(width, height, config.TITLE)
+        self.save_sprite = arcade.Sprite('icons/save-sm.png')
         arcade.set_background_color(arcade.csscolor.WHITE)
         self.setup()
 
@@ -34,7 +36,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
             center_y=self.height-(config.COMMAND_HEIGHT/2),
             width=self.width,
             height=config.COMMAND_HEIGHT,
-            color=arcade.csscolor.BLACK
+            color=arcade.csscolor.BLACK,
         )
         # COMMAND INSET
         arcade.draw_rectangle_filled(
@@ -42,7 +44,8 @@ class PixelPainter(arcade.Window, EventDispatcher):
             center_y=self.height-(config.COMMAND_HEIGHT/2),
             width=(self.width)-(config.COMMAND_PADDING*2),
             height=config.COMMAND_HEIGHT-(config.COMMAND_PADDING*2),
-            color=arcade.color.DARK_GRAY,
+            # color=arcade.color.DARK_GRAY,
+            color=arcade.csscolor.BLACK,
         )
         # BOTTOM BORDER
         arcade.draw_line(
@@ -53,6 +56,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
             color=arcade.csscolor.DARK_RED,
         )
         self._draw_brushset()
+        self._draw_save()
 
     def _draw_brushset(self):
         # config.BRUSH_WIDTH = (self.width-(config.COMMAND_PADDING*2))/len(self.brushes)
@@ -73,6 +77,20 @@ class PixelPainter(arcade.Window, EventDispatcher):
             )
             brush.draw(center_x, center_y)
 
+    def _draw_save(self):
+        center_x = self.width - config.COMMAND_PADDING - (config.BRUSH_WIDTH / 2)
+        center_y = self.height - (config.COMMAND_HEIGHT / 2)
+        brushbox_height = config.COMMAND_HEIGHT-(config.COMMAND_PADDING*2)
+        arcade.draw_rectangle_filled(
+            center_x=center_x,
+            center_y=center_y,
+            width=config.BRUSH_WIDTH,
+            height=brushbox_height,
+            color=arcade.color.AO,
+        )
+        self.save_sprite.center_x=center_x
+        self.save_sprite.center_y=center_y
+        self.save_sprite.draw()
 
     def _draw_palette(self):
         for i in range(len(self.palette)):
@@ -89,7 +107,10 @@ class PixelPainter(arcade.Window, EventDispatcher):
 
     def on_mouse_press(self, x, y, button, modifiers):
         if y > self.height - config.COMMAND_HEIGHT:
-            self._change_brush(x, y)
+            if x > self.width - config.COMMAND_PADDING - config.BRUSH_WIDTH:
+                self._save_palette()
+            else:
+                self._change_brush(x, y)
         else:
             self.selected_brush.active=True
             index = self._convert_cords_to_index(x, y)
@@ -121,3 +142,18 @@ class PixelPainter(arcade.Window, EventDispatcher):
         y = (index // config.RESOLUTION_WIDTH) * config.PIXEL_SIZE + half
 
         return (x, y)
+
+    def _save_palette(self):
+        f_name = str(time.time()) + '.pbm'
+        f = open(f"saves/{f_name}", 'a')
+        f.write('P1\n')
+        f.write(f"{config.RESOLUTION_WIDTH} {config.RESOLUTION_HEIGHT}\n")
+        rev = list(reversed(self.palette))
+        for i in range(config.RESOLUTION_HEIGHT):
+            start = i * config.RESOLUTION_WIDTH
+            end = start + config.RESOLUTION_WIDTH
+            palette_row = list(reversed(rev[start:end]))
+            data_row = ['0' if self.palette[index] else '1' for index in palette_row]
+            data_line = ' '.join(data_row) + '\n'
+            f.write(data_line)
+        f.close()
