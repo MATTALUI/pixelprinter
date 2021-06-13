@@ -14,7 +14,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
         self.setup()
 
     def setup(self):
-        self.current_brush = 0
+        self.current_brush_index = 0
         self.brushes = [BasicBrush(), EraserBrush()]
         self.palette = [False] * (config.RESOLUTION_WIDTH * config.RESOLUTION_HEIGHT)
 
@@ -25,7 +25,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
 
     @property
     def selected_brush(self):
-        return self.brushes[self.current_brush]
+        return self.brushes[self.current_brush_index]
 
     def _draw_command_pallette(self):
         # MAIN COMMAND
@@ -58,10 +58,11 @@ class PixelPainter(arcade.Window, EventDispatcher):
         # config.BRUSH_WIDTH = (self.width-(config.COMMAND_PADDING*2))/len(self.brushes)
         brushbox_height = config.COMMAND_HEIGHT-(config.COMMAND_PADDING*2)
         for i in range(len(self.brushes)):
+            brush = self.brushes[i]
             center_x=config.COMMAND_PADDING+((config.BRUSH_WIDTH*(i+1)))+i-(config.BRUSH_WIDTH/2)
             center_y=self.height-(config.COMMAND_HEIGHT/2)
             color = arcade.color.EGGSHELL
-            if i == self.current_brush:
+            if i == self.current_brush_index:
                 color = arcade.color.DARK_RED
             arcade.draw_rectangle_filled(
                 center_x=center_x,
@@ -70,6 +71,9 @@ class PixelPainter(arcade.Window, EventDispatcher):
                 height=brushbox_height,
                 color=color,
             )
+            brush.draw(center_x, center_y)
+
+
     def _draw_palette(self):
         for i in range(len(self.palette)):
             # TODO: have more robust "pixels"
@@ -90,7 +94,6 @@ class PixelPainter(arcade.Window, EventDispatcher):
             self.selected_brush.active=True
             index = self._convert_cords_to_index(x, y)
             self.selected_brush.paint(self.palette, index)
-            # self._paint(index)
 
     def on_mouse_release(self, x, y, button, modifiers):
         self.selected_brush.active=False
@@ -99,13 +102,12 @@ class PixelPainter(arcade.Window, EventDispatcher):
         if self.selected_brush.active and y < self.height - config.COMMAND_HEIGHT:
             index = self._convert_cords_to_index(x, y)
             self.selected_brush.paint(self.palette, index)
-            # self._paint(index)
 
     def _change_brush(self, x, y):
         relative_x = x - config.COMMAND_PADDING
-        new_brush = relative_x // config.BRUSH_WIDTH
-        if new_brush < len(self.brushes):
-            self.current_brush = new_brush
+        new_brush_index = relative_x // config.BRUSH_WIDTH
+        if new_brush_index < len(self.brushes):
+            self.current_brush_index = new_brush_index
 
     def _convert_cords_to_index(self, x, y):
         y_base = (y // config.PIXEL_SIZE) * config.RESOLUTION_WIDTH
@@ -119,7 +121,3 @@ class PixelPainter(arcade.Window, EventDispatcher):
         y = (index // config.RESOLUTION_WIDTH) * config.PIXEL_SIZE + half
 
         return (x, y)
-
-    def _paint(self, index):
-        # TODO: implement different types of brushes
-        self.palette[index] = True
