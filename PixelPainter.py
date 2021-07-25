@@ -153,7 +153,7 @@ class PixelPainter(arcade.Window, EventDispatcher):
             start = i * config.RESOLUTION_WIDTH
             end = start + config.RESOLUTION_WIDTH
             palette_row = list(reversed(rev[start:end]))
-            data_row = ['0' if self.palette[index] else '1' for index in palette_row]
+            data_row = ['1' if is_painted else '0' for is_painted in palette_row]
             data_line = ' '.join(data_row) + '\n'
             f.write(data_line)
         f.close()
